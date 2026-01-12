@@ -5,7 +5,7 @@ import FileUpload from '../components/FileUpload';
 import LiveWorkflowVisualizer from '../components/LiveWorkflowVisualizer';
 import AIReportCard from '../components/AIReportCard';
 import NftActions from '../components/NftActions';
-import { BACKEND_URL, ARIA_NFT_INTERFACE } from '../constants';
+import { BACKEND_URL, ARIA_NFT_INTERFACE, publicProvider } from '../constants';
 
 export default function HomePage({ address, provider, signer }) {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -17,8 +17,11 @@ export default function HomePage({ address, provider, signer }) {
   const toast = useToast();
 
   const waitForTxConfirmation = useCallback(async (txHash) => {
-    if (!provider) {
-      toast({ title: "Provider not ready", description: "Wallet is not fully connected.", status: "error" });
+    // Use publicProvider for robust reading, fallback to wallet provider if needed
+    const readProvider = publicProvider || provider;
+    
+    if (!readProvider) {
+      toast({ title: "Provider not ready", description: "No connection to blockchain.", status: "error" });
       return;
     }
 
@@ -27,13 +30,43 @@ export default function HomePage({ address, provider, signer }) {
 
     try {
       const formattedTxHash = txHash.startsWith('0x') ? txHash : `0x${txHash}`;
-      console.log("Waiting for transaction:", formattedTxHash);
+      console.log("Waiting for transaction (polling):", formattedTxHash);
 
-      const receipt = await provider.waitForTransaction(formattedTxHash, 1);
+      // Manual polling for receipt (more robust for cross-provider/RPC delays)
+      let receipt = null;
+      let attempts = 0;
+      const maxAttempts = 60; // 60 * 2s = 120s timeout
+
+      while (!receipt && attempts < maxAttempts) {
+        attempts++;
+        
+        // 1. Try Public Provider
+        try {
+          receipt = await readProvider.getTransactionReceipt(formattedTxHash);
+        } catch (err) {
+          console.warn(`Public Provider check failed (Attempt ${attempts}):`, err.message);
+        }
+
+        // 2. If no receipt yet, try Wallet Provider (MetaMask)
+        if (!receipt && provider && provider !== readProvider) {
+          try {
+             const walletReceipt = await provider.getTransactionReceipt(formattedTxHash);
+             if (walletReceipt) receipt = walletReceipt;
+          } catch (err) {
+             console.warn("Wallet Provider check failed:", err.message);
+          }
+        }
+        
+        if (!receipt) {
+            if (attempts % 5 === 0) console.log(`Polling attempt ${attempts}/${maxAttempts}...`);
+            await new Promise(r => setTimeout(r, 2000)); // Wait 2s
+        }
+      }
+
       console.log("Transaction receipt:", receipt);
 
       if (!receipt || receipt.status === 0) {
-        throw new Error("Transaction failed or was reverted");
+        throw new Error("Transaction failed, reverted, or timed out.");
       }
 
       // Parse logs to get tokenId
@@ -47,7 +80,7 @@ export default function HomePage({ address, provider, signer }) {
             break;
           }
         } catch (e) {
-          console.debug("Skipping log:", e.message);
+            // Ignore parse errors for other events
         }
       }
 
@@ -65,7 +98,16 @@ export default function HomePage({ address, provider, signer }) {
       console.error("Transaction confirmation error:", e);
       setError(`Transaction failed: ${e.message}`);
       setWorkflowStatus('error');
-      toast({ title: "Transaction Failed", description: e.message || "Please check the block explorer for details", status: "error", duration: 7000 });
+      toast({ 
+        title: "Transaction Failed", 
+        description: (
+          <Box>
+            <Text>{e.message || "Please check the block explorer for details"}</Text>
+          </Box>
+        ),
+        status: "error", 
+        duration: 7000 
+      });
     } finally {
       setIsConfirming(false);
     }

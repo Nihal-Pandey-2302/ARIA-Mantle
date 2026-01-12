@@ -1,18 +1,27 @@
-# A.R.I.A. - Automated RWA Intelligence & Authentication (Mantle Edition)
+# A.R.I.A. - Automated RWA Intelligence & Authentication
 
-## Built for Mantle Global Hackathon 2025 🏆
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Network-Mantle-black?style=for-the-badge&logo=mantle" alt="Mantle">
-  <img src="https://img.shields.io/badge/AI-Groq%20Llama%203.3-orange?style=for-the-badge&logo=meta" alt="Groq AI">
-  <img src="https://img.shields.io/badge/Storage-IPFS-65c2cb?style=for-the-badge&logo=ipfs" alt="IPFS">
-  <img src="https://img.shields.io/badge/Stack-React%20%2B%20Python-green?style=for-the-badge" alt="Tech Stack">
-</p>
+## Mantle Global Hackathon 2025 🏆
 
 <p align="center">
-  <strong>The world's first Mantle-native RWA verification platform</strong><br>
-  <em>Verify ANY document. Tokenize ANY asset. Trade instantly. All in under 3 seconds.</em>
+  <img src="https://img.shields.io/badge/Built%20on-Mantle-000000?style=for-the-badge" alt="Mantle">
+  <img src="https://img.shields.io/badge/AI-Groq%20Llama%203.3-orange?style=for-the-badge" alt="Groq AI">
+  <img src="https://img.shields.io/badge/Track-RWA%20%2F%20RealFi-blueviolet?style=for-the-badge" alt="RWA Track">
 </p>
+
+**The world's first AI-powered multi-document RWA verification platform**  
+_Verify ANY document. Tokenize ANY asset. Earn yield. All on Mantle._
+
+### 🎯 Why Mantle?
+
+- ⚡ **25,000+ TPS** - Instant RWA trading
+- 💰 **$0.01 Gas Fees** - 5000x cheaper than Ethereum
+- 🔥 **3-Second Finality** - Near-instant settlement
+- 🛡️ **EVM Compatible** - Easy enterprise integration
+
+### 🏆 Track: RWA / RealFi
+
+Unlocking the $2 trillion real-world asset market with AI verification,
+compliance-ready tokenization, and native yield distribution.
 
 ---
 
@@ -97,8 +106,8 @@ graph TD
     end
 
     subgraph Contracts [Mantle Network]
-        Auth[AriaNFT (KYC-Gated)]:::blockchain
-        Mkt[Marketplace (Hybrid Pricing)]:::blockchain
+        Auth["AriaNFT (KYC-Gated)"]:::blockchain
+        Mkt["Marketplace (Hybrid Pricing)"]:::blockchain
         Dist[YieldDistributor]:::blockchain
     end
 
@@ -182,12 +191,8 @@ npx hardhat run scripts/deploy.js --network mantleTestnet
 #### **4. Run Application**
 
 ```bash
-# Terminal 1: Backend
-python backend/app.py
-
-# Terminal 2: Frontend
-cd frontend
-npm run dev
+# Starts both Backend (Port 5001) and Frontend (Port 5173) components
+./run.sh
 ```
 
 </details>
@@ -244,12 +249,30 @@ Sellers can list assets in USD, preventing crypto-volatility risk.
 
 ## 📜 Deployed Contracts (Mantle Testnet)
 
-| Contract             | Address                           |
-| -------------------- | --------------------------------- |
-| **AriaNFT**          | `DEPLOY_ON_MANTLE_TO_GET_ADDRESS` |
-| **Marketplace**      | `DEPLOY_ON_MANTLE_TO_GET_ADDRESS` |
-| **YieldDistributor** | `DEPLOY_ON_MANTLE_TO_GET_ADDRESS` |
-| **MockOracle**       | `DEPLOY_ON_MANTLE_TO_GET_ADDRESS` |
+| Contract             | Address                                      |
+| -------------------- | -------------------------------------------- |
+| Contract             | Address                                      |
+| -------------------- | -------------------------------------------- |
+| **AriaToken**        | `0xf37F527E7b50A07Fa7fd49D595132a1f2fDC5f98` |
+| **AriaNFT**          | `0xD504D75D5ebfaBEfF8d35658e85bbc52CC66d880` |
+| **Marketplace**      | `0x13056D2af56AFb98d924FC8146B8E0aa2C8B67d7` |
+| **YieldDistributor** | `0x047100C5357497bFC8Ecc6846E65BC7bDb4d35f9` |
+| **FractionalNFT**    | `0x3e2B64f8d927447C370CD6a84FAdf92f6B95C806` |
+| **MockOracle**       | `0x85B5F81f2581Ae8BbC1353F55456EF00aD67993B` |
+
+---
+
+## Team
+
+### Nihal Pandey - Founder & Lead Engineer
+
+- **Education**: Electronics Engineering, RGIPT (2022-2026)
+- **Experience**:
+  - Cybersecurity Research Intern, PMO Govt. of India (2025)
+  - Winner: aOS Andromeda Hackathon ($2,500 prize, 1st/2500 teams)
+  - Winner: Smart India Hackathon 2024 (₹100K prize)
+- **Expertise**: Rust, Solidity, EVM internals, cybersecurity
+- **Why ARIA**: "I saw a $2T market trapped in manual processes. ARIA combines my blockchain and security background to fix it."
 
 ---
 

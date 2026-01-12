@@ -48,16 +48,34 @@ console.log(`✅ AriaMarketplace deployed to: ${ariaMarketplaceAddress}\n`);
   const fractionalAddress = await fractionalNFT.getAddress();
   console.log(`✅ FractionalNFT deployed to: ${fractionalAddress}\n`);
 
-  // ========== 5. Deploy MockQIEOracle (NEW!) ==========
-  console.log("🔮 Deploying MockQIEOracle...");
+  // ========== 5. Deploy YieldDistributor (NEW!) ==========
+  console.log("💸 Deploying YieldDistributor...");
+  const YieldDistributor = await hre.ethers.getContractFactory("YieldDistributor");
+  const yieldDistributor = await YieldDistributor.deploy(
+    ariaNFTAddress,      // NFT contract
+    ariaTokenAddress,    // Payment token for yields
+    fractionalAddress    // Fractional contract
+  );
+  await yieldDistributor.waitForDeployment();
+  const yieldDistributorAddress = await yieldDistributor.getAddress();
+  console.log(`✅ YieldDistributor deployed to: ${yieldDistributorAddress}\n`);
+
+  // Link YieldDistributor to AriaNFT
+  console.log("🔗 Linking YieldDistributor to AriaNFT...");
+  const linkTx = await ariaNFT.setYieldDistributor(yieldDistributorAddress);
+  await linkTx.wait();
+  console.log("✅ AriaNFT linked to YieldDistributor\n");
+
+  // ========== 6. Deploy MockOracle (NEW!) ==========
+  console.log("🔮 Deploying MockOracle...");
   let oracleAddress = "0x0000000000000000000000000000000000000000"; // Default
   
   try {
-    const MockQIEOracle = await hre.ethers.getContractFactory("MockQIEOracle");
-    const oracle = await MockQIEOracle.deploy();
+    const MockOracle = await hre.ethers.getContractFactory("MockOracle");
+    const oracle = await MockOracle.deploy("Mock Oracle", 18);
     await oracle.waitForDeployment();
     oracleAddress = await oracle.getAddress();
-    console.log(`✅ MockQIEOracle deployed to: ${oracleAddress}\n`);
+    console.log(`✅ MockOracle deployed to: ${oracleAddress}\n`);
 
     // Set oracle on marketplace
     console.log("🔗 Connecting oracle to marketplace...");
@@ -81,7 +99,7 @@ console.log(`✅ AriaMarketplace deployed to: ${ariaMarketplaceAddress}\n`);
     }
     console.log();
   } catch (err) {
-    console.warn("⚠️ Oracle deployment skipped (contract may not exist yet)");
+    console.warn("⚠️ Oracle deployment skipped (contract may not exist yet)", err);
     console.log("   You can deploy oracle later with: npx hardhat run scripts/deploy-oracle.js\n");
   }
 
@@ -95,7 +113,7 @@ console.log(`✅ AriaMarketplace deployed to: ${ariaMarketplaceAddress}\n`);
       AriaNFT: ariaNFTAddress,
       AriaMarketplace: ariaMarketplaceAddress,
       FractionalNFT: fractionalAddress,
-      MockQIEOracle: oracleAddress,
+      MockOracle: oracleAddress,
     },
   };
 
@@ -126,12 +144,25 @@ console.log(`✅ AriaMarketplace deployed to: ${ariaMarketplaceAddress}\n`);
       /FRACTIONALNFT_ADDRESS\s*=\s*".*"/,
       `FRACTIONALNFT_ADDRESS = "${fractionalAddress}"`
     );
+    
+    // Add YieldDistributor
+    if (!backend.includes("YIELDDISTRIBUTOR_ADDRESS")) {
+         backend = backend.replace(
+            `FRACTIONALNFT_ADDRESS = "${fractionalAddress}"`,
+            `FRACTIONALNFT_ADDRESS = "${fractionalAddress}"\n\nYIELDDISTRIBUTOR_ADDRESS = "${yieldDistributorAddress}"`
+         );
+    } else {
+        backend = backend.replace(
+            /YIELDDISTRIBUTOR_ADDRESS\s*=\s*".*"/,
+            `YIELDDISTRIBUTOR_ADDRESS = "${yieldDistributorAddress}"`
+        );
+    }
 
     // Add or update ORACLE_ADDRESS
     if (!backend.includes("ORACLE_ADDRESS")) {
       backend = backend.replace(
-        /FRACTIONALNFT_ADDRESS = ".*"/,
-        `FRACTIONALNFT_ADDRESS = "${fractionalAddress}"\n\nORACLE_ADDRESS = "${oracleAddress}"`
+        /YIELDDISTRIBUTOR_ADDRESS\s*=\s*".*"/,
+        `YIELDDISTRIBUTOR_ADDRESS = "${yieldDistributorAddress}"\n\nORACLE_ADDRESS = "${oracleAddress}"`
       );
     } else {
       backend = backend.replace(
@@ -149,7 +180,7 @@ console.log(`✅ AriaMarketplace deployed to: ${ariaMarketplaceAddress}\n`);
 
   // ========== Update Frontend ==========
   console.log("📝 Updating frontend/src/constants.js...");
-  const frontendPath = path.join(__dirname, "../../aria-frontend/src/constants.js");
+  const frontendPath = path.join(__dirname, "../../frontend/src/constants.js");
   
   try {
     let constants = fs.readFileSync(frontendPath, "utf8");
@@ -171,11 +202,24 @@ console.log(`✅ AriaMarketplace deployed to: ${ariaMarketplaceAddress}\n`);
       `export const FRACTIONAL_NFT_ADDRESS = "${fractionalAddress}"`
     );
 
+    // Add YieldDistributor
+    if (!constants.includes("YIELD_DISTRIBUTOR_ADDRESS")) {
+         constants = constants.replace(
+            `export const FRACTIONAL_NFT_ADDRESS = "${fractionalAddress}"`,
+            `export const FRACTIONAL_NFT_ADDRESS = "${fractionalAddress}";\nexport const YIELD_DISTRIBUTOR_ADDRESS = "${yieldDistributorAddress}"`
+         );
+    } else {
+        constants = constants.replace(
+            /export const YIELD_DISTRIBUTOR_ADDRESS\s*=\s*".*"/,
+            `export const YIELD_DISTRIBUTOR_ADDRESS = "${yieldDistributorAddress}"`
+        );
+    }
+
     // Add or update ORACLE_ADDRESS
     if (!constants.includes("ORACLE_ADDRESS")) {
       constants = constants.replace(
-        /export const FRACTIONAL_NFT_ADDRESS = ".*"/,
-        `export const FRACTIONAL_NFT_ADDRESS = "${fractionalAddress}";\nexport const ORACLE_ADDRESS = "${oracleAddress}";`
+        /export const YIELD_DISTRIBUTOR_ADDRESS\s*=\s*".*"/,
+        `export const YIELD_DISTRIBUTOR_ADDRESS = "${yieldDistributorAddress}";\nexport const ORACLE_ADDRESS = "${oracleAddress}";`
       );
     } else {
       constants = constants.replace(
@@ -187,7 +231,7 @@ console.log(`✅ AriaMarketplace deployed to: ${ariaMarketplaceAddress}\n`);
     fs.writeFileSync(frontendPath, constants);
     console.log("✅ Frontend constants.js updated\n");
   } catch (err) {
-    console.warn("⚠️ Could not update frontend/constants.js");
+    console.warn("⚠️ Could not update frontend/src/constants.js", err);
     console.log(`   Please add manually: export const ORACLE_ADDRESS = "${oracleAddress}";\n`);
   }
 
@@ -198,7 +242,7 @@ console.log(`✅ AriaMarketplace deployed to: ${ariaMarketplaceAddress}\n`);
   console.log(`AriaNFT:         ${ariaNFTAddress}`);
   console.log(`AriaMarketplace: ${ariaMarketplaceAddress}`);
   console.log(`FractionalNFT:   ${fractionalAddress}`);
-  console.log(`MockQIEOracle:   ${oracleAddress}`);
+  console.log(`MockOracle:      ${oracleAddress}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
   console.log("👉 Next Steps:");
   console.log("1️⃣ Restart backend: cd backend && python app.py");

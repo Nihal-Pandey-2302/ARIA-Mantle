@@ -23,14 +23,28 @@ function App() {
   const [loading, setLoading] = useState(false);
   const toast = useToast();
 
-  // Switch to Hardhat Local Network
+  // Switch to Mantle Testnet
   const switchToHardhatNetwork = async () => {
     try {
+      // Try to switch to the network
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: NETWORK_CONFIG.chainId }],
       });
+      
+      // Even if switch is successful, try to update RPC URL by re-adding it
+      // This fixes cases where the user has the network added with a dead RPC
+      try {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [NETWORK_CONFIG],
+        });
+      } catch (e) {
+        console.warn("Failed to update network RPC params", e);
+      }
+
     } catch (switchError) {
+      // This error code 4902 indicates that the chain has not been added to MetaMask.
       if (switchError.code === 4902) {
         try {
           await window.ethereum.request({
@@ -61,9 +75,35 @@ function App() {
 
     try {
       setLoading(true);
-      await switchToHardhatNetwork();
+      
+      // Handle multiple wallets (QIE Wallet vs MetaMask hijacking)
+      let ethProvider = window.ethereum;
+      if (window.ethereum.providers) {
+        // If multiple providers are injected, find MetaMask
+        const metaMask = window.ethereum.providers.find(p => p.isMetaMask);
+        if (metaMask) ethProvider = metaMask;
+      }
+      
+      // Force the selected provider to switch network
+      try {
+        await ethProvider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: NETWORK_CONFIG.chainId }],
+        });
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+            try {
+                await ethProvider.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [NETWORK_CONFIG],
+                });
+            } catch (addError) {
+                console.error("Failed to add network", addError);
+            }
+        }
+      }
 
-      const web3Provider = new ethers.BrowserProvider(window.ethereum);
+      const web3Provider = new ethers.BrowserProvider(ethProvider);
       const web3Signer = await web3Provider.getSigner();
       const userAddress = await web3Signer.getAddress();
 

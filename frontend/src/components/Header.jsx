@@ -21,7 +21,7 @@ import { FaWallet, FaCopy, FaSignOutAlt } from 'react-icons/fa';
 import { ChevronDownIcon } from '@chakra-ui/icons';
 import { Activity, TrendingUp } from 'lucide-react';
 import { BACKEND_URL } from '../constants';
-import KYCGate from './KYCGate';
+import KYGCStatusCheck from './KYCStatusCheck';
 
 const Header = ({ address, loading, provider, onConnect, onDisconnect }) => {
   const { onCopy, hasCopied } = useClipboard(address || '');
@@ -120,12 +120,12 @@ const Header = ({ address, loading, provider, onConnect, onDisconnect }) => {
         )}
 
         {address && (
-          <KYCGate 
-            isConnected={!!address} 
+          <KYGCStatusCheck 
+            address={address} 
             provider={provider} 
-            userAddress={address} 
           />
         )}
+
 
         {address ? (
           <Menu>

@@ -27,7 +27,7 @@ const NftActions = ({
 
   const toast = useToast();
 
-  const explorerLink = `https://your-qie-explorer.com/tx/${txId}`;
+  const explorerLink = `https://sepolia.mantlescan.xyz/tx/${txId}`;
 
   const {
     isOpen: isFractionalizeOpen,

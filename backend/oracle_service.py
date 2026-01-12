@@ -13,8 +13,9 @@ class OracleService:
     """Service for QIE Oracle (AggregatorV3 compatible)"""
     
     # Oracle config from environment
-    ORACLE_ADDRESS = os.getenv("QIE_ORACLE_ADDRESS", "")
-    PROVIDER_URL = os.getenv("QIE_RPC_URL", "https://rpc-main1.qiblockchain.online/")
+    ORACLE_ADDRESS = os.getenv("ORACLE_ADDRESS", "")  # Updated from QIE_ORACLE_ADDRESS
+    # Using Mantle Testnet RPC from our successful deployment
+    PROVIDER_URL = os.getenv("MANTLE_RPC_URL", "https://endpoints.omniatech.io/v1/mantle/sepolia/public")
     
     # Price cache
     price_cache: Dict[str, Dict] = {}

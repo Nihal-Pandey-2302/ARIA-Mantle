@@ -365,8 +365,8 @@ const FileUpload = ({
               🤖 Ready to Analyze {DOCUMENT_TYPES[selectedDocType].icon} {DOCUMENT_TYPES[selectedDocType].name}
             </Text>
             <Text fontSize="xs" color="gray.300">
-              Gemini AI will extract specific fields for this document type, verify authenticity, 
-              scan QR codes, and generate a trust score before minting your NFT on QIE Blockchain.
+              Groq AI will extract specific fields for this document type, verify authenticity, 
+              scan QR codes, and generate a trust score before minting your NFT on Mantle Network.
             </Text>
           </VStack>
         </Alert>
@@ -389,7 +389,7 @@ const FileUpload = ({
               borderRadius="full"
             />
             <HStack spacing={4} fontSize="xs" color="gray.400" flexWrap="wrap">
-              <Text>⚡ Gemini AI Processing</Text>
+              <Text>⚡ Groq AI Processing</Text>
               <Text>📸 QR Verification</Text>
               <Text>🔗 IPFS Upload</Text>
               <Text>⛓️ Blockchain Minting</Text>
@@ -435,7 +435,7 @@ const FileUpload = ({
           <AlertIcon color="green.300" />
           <VStack align="start" spacing={1} flex={1}>
             <Text fontWeight="bold" fontSize="sm" color="green.200">
-              🎉 {DOCUMENT_TYPES[selectedDocType].name} NFT Minted on QIE Blockchain!
+              🎉 {DOCUMENT_TYPES[selectedDocType].name} NFT Minted on Mantle Network!
             </Text>
             <Text fontSize="xs" color="gray.300">
               Your verified {DOCUMENT_TYPES[selectedDocType].name} RWA NFT is now on-chain with AI verification report stored on IPFS
@@ -452,16 +452,16 @@ const FileUpload = ({
             25,000+ TPS
           </Text>
           <Text fontSize="xs" color="gray.400">
-            QIE Blockchain Speed
+            Mantle Network Speed
           </Text>
         </Box>
         <Box p={3} bg="gray.800" borderRadius="md" textAlign="center">
           <Text fontSize="2xl" mb={1}>🔥</Text>
           <Text fontSize="xs" fontWeight="bold" color="orange.300">
-            Near-Zero Fees
+            Low Fees
           </Text>
           <Text fontSize="xs" color="gray.400">
-            80% Gas Burn
+            $0.01 Gas Costs
           </Text>
         </Box>
         <Box p={3} bg="gray.800" borderRadius="md" textAlign="center">
@@ -470,7 +470,7 @@ const FileUpload = ({
             AI Verified
           </Text>
           <Text fontSize="xs" color="gray.400">
-            Gemini 2.5 Pro
+            Groq Llama 3.3
           </Text>
         </Box>
       </SimpleGrid>

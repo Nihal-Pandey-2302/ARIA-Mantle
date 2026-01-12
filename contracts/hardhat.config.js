@@ -18,7 +18,7 @@ module.exports = {
       url: "http://127.0.0.1:8545",
     },
     mantleTestnet: {
-      url: "https://rpc.testnet.mantle.xyz",
+      url: "https://endpoints.omniatech.io/v1/mantle/sepolia/public",
       chainId: 5003,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },

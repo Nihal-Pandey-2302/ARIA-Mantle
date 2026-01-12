@@ -8,7 +8,8 @@ import { ethers } from 'ethers';
 import {
   MARKETPLACE_ADDRESS, MARKETPLACE_ABI,
   ARIA_TOKEN_ADDRESS, ARIA_TOKEN_ABI,
-  TOKEN_DISPLAY, TOKEN_DECIMALS
+  TOKEN_DISPLAY, TOKEN_DECIMALS,
+  publicProvider
 } from '../constants';
 
 const StakingPage = ({ address, signer }) => {
@@ -38,10 +39,12 @@ const StakingPage = ({ address, signer }) => {
     console.log('🔄 Fetching balances for:', address);
 
     try {
-      // Create contract instances (read-only with provider)
-      const provider = signer.provider;
-      const ariaToken = new ethers.Contract(ARIA_TOKEN_ADDRESS, ARIA_TOKEN_ABI, provider);
-      const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MARKETPLACE_ABI, provider);
+      // Create contract instances (read-only with public provider for stability)
+      // We use publicProvider to avoid MetaMask RPC errors during simple reads
+      const readProvider = publicProvider || signer.provider;
+      
+      const ariaToken = new ethers.Contract(ARIA_TOKEN_ADDRESS, ARIA_TOKEN_ABI, readProvider);
+      const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MARKETPLACE_ABI, readProvider);
 
       // Fetch all data in parallel
       const [ariaBal, stakedBal, rewardsBal, totalStakedAmount] = await Promise.all([

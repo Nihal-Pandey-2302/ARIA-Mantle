@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { VStack, Text, Input, Button, useToast } from "@chakra-ui/react";
 import { ethers } from "ethers";
-import { ARIA_TOKEN_ADDRESS, ARIA_TOKEN_ABI, TOKEN_DECIMALS } from "../constants";
+import { ARIA_TOKEN_ADDRESS, ARIA_TOKEN_ABI, TOKEN_DECIMALS, publicProvider } from "../constants";
 
 const MintAriaPage = ({ provider, account }) => {
   const [ethAmount, setEthAmount] = useState("");
@@ -12,7 +12,8 @@ const MintAriaPage = ({ provider, account }) => {
   const fetchBalance = async () => {
     if (!provider || !account) return;
     try {
-      const ariaToken = new ethers.Contract(ARIA_TOKEN_ADDRESS, ARIA_TOKEN_ABI, provider);
+      const readProvider = publicProvider || provider;
+      const ariaToken = new ethers.Contract(ARIA_TOKEN_ADDRESS, ARIA_TOKEN_ABI, readProvider);
       const balance = await ariaToken.balanceOf(account);
       setAriaBalance(Number(balance) / 10 ** TOKEN_DECIMALS);
     } catch (err) {

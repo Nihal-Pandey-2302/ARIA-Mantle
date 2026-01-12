@@ -6,73 +6,168 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+interface IFractionalNFT {
+    function getFractionalToken(
+        uint256 tokenId
+    ) external view returns (address);
+}
+
 contract YieldDistributor is Ownable, ReentrancyGuard {
+    IERC721 public ariaNFT;
+    IERC20 public ariaToken;
+    IFractionalNFT public fractionalNFT;
+
     struct YieldStream {
-        uint256 tokenId; // ARIA NFT ID
-        uint256 totalYield; // Total amount distributed so far (native currency)
-        uint256 pendingYield; // Yield waiting to be claimed
-        address nftContract; // Address of the RWA NFT
-        uint256 lastDistributionTime;
+        uint256 totalYield; // Total yield generated (in ARIA tokens)
+        uint256 distributedYield; // Already distributed
+        uint256 lastUpdateTime; // Last time yield was calculated
+        uint256 yieldRate; // ARIA tokens per second (e.g., 12.5% APY)
+        bool active; // Is yield accruing?
     }
 
-    // Mapping from NFT ID to YieldStream
-    mapping(uint256 => YieldStream) public streams;
+    mapping(uint256 => YieldStream) public streams; // tokenId => YieldStream
+    mapping(uint256 => mapping(address => uint256)) public claimed; // tokenId => user => amount
 
-    // Track claimed yield per user per stream?
-    // Simplified: If NFT owner changes, how do we handle?
-    // For Hackathon: Assume yield claims go to CURRENT owner of NFT.
-
-    event YieldDeposited(uint256 indexed tokenId, uint256 amount);
+    event YieldStreamCreated(uint256 indexed tokenId, uint256 yieldRate);
     event YieldClaimed(
         uint256 indexed tokenId,
-        address indexed owner,
+        address indexed claimer,
         uint256 amount
     );
+    event YieldDeposited(uint256 indexed tokenId, uint256 amount);
 
-    constructor() Ownable() {}
+    constructor(address _ariaNFT, address _ariaToken, address _fractionalNFT) {
+        ariaNFT = IERC721(_ariaNFT);
+        ariaToken = IERC20(_ariaToken);
+        fractionalNFT = IFractionalNFT(_fractionalNFT);
+    }
 
-    // 1. Deposit Yield (e.g. from invoice payment or rental income)
-    // Anyone can deposit yield for an asset (e.g. the Invoice payer)
-    function depositYield(
+    /**
+     * @dev Create a yield stream for an NFT (called by NFT minter or admin)
+     * @param tokenId The NFT token ID
+     * @param yieldRate ARIA tokens per second (e.g., 0.000000396 ARIA/sec = ~12.5% APY)
+     */
+    function createYieldStream(uint256 tokenId, uint256 yieldRate) external {
+        // Allow owner or the NFT contract to create streams
+        require(
+            msg.sender == owner() || msg.sender == address(ariaNFT),
+            "Unauthorized"
+        );
+        require(streams[tokenId].active == false, "Stream already exists");
+
+        streams[tokenId] = YieldStream({
+            totalYield: 0,
+            distributedYield: 0,
+            lastUpdateTime: block.timestamp,
+            yieldRate: yieldRate,
+            active: true
+        });
+
+        emit YieldStreamCreated(tokenId, yieldRate);
+    }
+
+    /**
+     * @dev Deposit yield into the contract (from marketplace fees, interest payments, etc)
+     */
+    function depositYield(uint256 tokenId, uint256 amount) external {
+        require(streams[tokenId].active, "No active stream");
+        require(
+            ariaToken.transferFrom(msg.sender, address(this), amount),
+            "Transfer failed"
+        );
+
+        streams[tokenId].totalYield += amount;
+        emit YieldDeposited(tokenId, amount);
+    }
+
+    /**
+     * @dev Calculate pending yield for a token holder
+     */
+    function pendingYield(
         uint256 tokenId,
-        address nftContract
-    ) external payable nonReentrant {
-        require(msg.value > 0, "No yield provided");
+        address holder
+    ) public view returns (uint256) {
+        YieldStream memory stream = streams[tokenId];
+        if (!stream.active) return 0;
 
-        YieldStream storage stream = streams[tokenId];
-        stream.tokenId = tokenId;
-        stream.nftContract = nftContract;
+        // Calculate time-based accrual
+        uint256 elapsed = block.timestamp - stream.lastUpdateTime;
+        uint256 accrued = elapsed * stream.yieldRate;
 
-        // Add to pending
-        stream.pendingYield += msg.value;
-        stream.totalYield += msg.value; // Track lifetime stats
-        stream.lastDistributionTime = block.timestamp;
+        // Add any deposited yield
+        uint256 totalAvailable = stream.totalYield +
+            accrued -
+            stream.distributedYield;
 
-        emit YieldDeposited(tokenId, msg.value);
+        // Check if NFT is fractionalized
+        address fractionalToken = address(0);
+        try fractionalNFT.getFractionalToken(tokenId) returns (address token) {
+            fractionalToken = token;
+        } catch {}
+        if (fractionalToken != address(0)) {
+            // Fractionalized: holder gets proportional share
+            uint256 holderBalance = IERC20(fractionalToken).balanceOf(holder);
+            uint256 totalSupply = IERC20(fractionalToken).totalSupply();
+
+            if (totalSupply == 0) return 0;
+            uint256 holderShare = (totalAvailable * holderBalance) /
+                totalSupply;
+
+            // Subtract already claimed
+            if (holderShare <= claimed[tokenId][holder]) return 0;
+            return holderShare - claimed[tokenId][holder];
+        } else {
+            // Not fractionalized: full owner gets all
+            if (ariaNFT.ownerOf(tokenId) != holder) return 0;
+            return totalAvailable - claimed[tokenId][holder];
+        }
     }
 
-    // 2. Claim Yield (Only NFT Owner)
+    /**
+     * @dev Claim pending yield
+     */
     function claimYield(uint256 tokenId) external nonReentrant {
-        YieldStream storage stream = streams[tokenId];
-        require(stream.pendingYield > 0, "No yield to claim");
+        uint256 pending = pendingYield(tokenId, msg.sender);
+        require(pending > 0, "No yield to claim");
 
-        // Verify ownership
-        IERC721 nft = IERC721(stream.nftContract);
-        require(nft.ownerOf(tokenId) == msg.sender, "Only NFT owner can claim");
+        // Update claimed amount
+        claimed[tokenId][msg.sender] += pending;
+        streams[tokenId].distributedYield += pending;
 
-        uint256 amount = stream.pendingYield;
-        stream.pendingYield = 0;
+        // Transfer ARIA tokens
+        require(ariaToken.transfer(msg.sender, pending), "Transfer failed");
 
-        (bool sent, ) = payable(msg.sender).call{value: amount}("");
-        require(sent, "Failed to send Ether");
-
-        emit YieldClaimed(tokenId, msg.sender, amount);
+        emit YieldClaimed(tokenId, msg.sender, pending);
     }
 
-    // View function for frontend
-    function getClaimableYield(
+    /**
+     * @dev Emergency stop (owner only)
+     */
+    function pauseYieldStream(uint256 tokenId) external onlyOwner {
+        streams[tokenId].active = false;
+    }
+
+    /**
+     * @dev Get yield stats for frontend
+     */
+    function getYieldStats(
         uint256 tokenId
-    ) external view returns (uint256) {
-        return streams[tokenId].pendingYield;
+    )
+        external
+        view
+        returns (
+            uint256 totalYield,
+            uint256 distributedYield,
+            uint256 yieldRate,
+            bool active
+        )
+    {
+        YieldStream memory stream = streams[tokenId];
+        return (
+            stream.totalYield,
+            stream.distributedYield,
+            stream.yieldRate,
+            stream.active
+        );
     }
 }

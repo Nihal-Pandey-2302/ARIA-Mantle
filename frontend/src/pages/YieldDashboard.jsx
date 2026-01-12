@@ -3,7 +3,6 @@ import {
   Box,
   Heading,
   Text,
-  SimpleGrid,
   Stat,
   StatLabel,
   StatNumber,
@@ -18,47 +17,128 @@ import {
   useToast,
   Badge,
   Container,
-  VStack
+  VStack,
+  Spinner
 } from '@chakra-ui/react';
 import { ethers } from 'ethers';
-
-// Placeholder ABI - In real app, import from artifacts
-const YIELD_ABI = [
-  "function getClaimableYield(uint256 tokenId) external view returns (uint256)",
-  "function claimYield(uint256 tokenId) external",
-  "event YieldClaimed(uint256 indexed tokenId, address indexed owner, uint256 amount)"
-];
-
-const MOCK_YIELD_DATA = [
-  { tokenId: 1, name: "Invoice #BLR8-658", asset: "USDC", apy: "12.5%", claimable: "47.32", contract: "0x123..." },
-  { tokenId: 5, name: "Property Deed #22", asset: "ETH", apy: "5.2%", claimable: "0.045", contract: "0x456..." },
-];
+import { 
+  YIELD_DISTRIBUTOR_ADDRESS, 
+  YIELD_DISTRIBUTOR_ABI, 
+  ARIA_NFT_ADDRESS, 
+  ARIA_NFT_ABI,
+  publicProvider 
+} from '../constants';
 
 const YieldDashboard = ({ provider, address }) => {
-  const [loading, setLoading] = useState({});
+  const [yields, setYields] = useState([]);
+  const [totalClaimable, setTotalClaimable] = useState('0');
+  const [loading, setLoading] = useState(true);
   const toast = useToast();
 
-  const handleClaim = async (tokenId, amount) => {
-    setLoading(prev => ({ ...prev, [tokenId]: true }));
+  useEffect(() => {
+    if (address) {
+        loadYieldData();
+    }
+  }, [address]);
+
+  const loadYieldData = async () => {
     try {
-      // Simulation for Hackathon Demo
-      // In prod: const contract = new ethers.Contract(YIELD_DISTRIBUTOR_ADDRESS, YIELD_ABI, provider.getSigner());
-      // await contract.claimYield(tokenId);
+      // Use publicProvider for robust reads
+      const readProvider = publicProvider || provider;
+      if (!readProvider) return;
+
+      const yieldContract = new ethers.Contract(
+        YIELD_DISTRIBUTOR_ADDRESS,
+        YIELD_DISTRIBUTOR_ABI,
+        readProvider
+      );
       
-      await new Promise(r => setTimeout(r, 1500)); // Fake tx delay
+      const ariaNFTContract = new ethers.Contract(
+        ARIA_NFT_ADDRESS,
+        ARIA_NFT_ABI,
+        readProvider
+      );
+      
+      const balance = await ariaNFTContract.balanceOf(address);
+      const yieldData = [];
+      let total = 0n; // Use BigInt for calculation
+      
+      // Iterate through user's NFTs
+      for (let i = 0; i < Number(balance); i++) {
+        const tokenId = await ariaNFTContract.tokenOfOwnerByIndex(address, i);
+        const pending = await yieldContract.pendingYield(tokenId, address);
+        const stats = await yieldContract.getYieldStats(tokenId);
+        
+        // Get NFT metadata
+        const tokenURI = await ariaNFTContract.tokenURI(tokenId);
+        let metadata = { name: `SWA #${tokenId}` };
+        try {
+            // Check if it's an IPFS hash or full URL
+            const url = tokenURI.startsWith('ipfs://') 
+                ? `https://ipfs.io/ipfs/${tokenURI.replace('ipfs://', '')}` 
+                : tokenURI;
+            metadata = await fetch(url).then(r => r.json());
+        } catch (e) {
+            console.warn("Failed to fetch metadata", e);
+        }
+        
+        yieldData.push({
+          tokenId: tokenId.toString(),
+          name: metadata.name || `Asset #${tokenId.toString()}`,
+          claimable: ethers.formatEther(pending),
+          totalYield: ethers.formatEther(stats[0]), // stats.totalYield
+          yieldRate: stats[2].toString(), // stats.yieldRate
+          active: stats[3] // stats.active
+        });
+        
+        total += BigInt(pending);
+      }
+      
+      setYields(yieldData);
+      setTotalClaimable(ethers.formatEther(total));
+    } catch (error) {
+        console.error("Failed to load yield data", error);
+        toast({ title: "Failed to load yield data", status: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClaim = async (tokenId) => {
+    if (!provider) return;
+    try {
+      const signer = await provider.getSigner();
+      const yieldContract = new ethers.Contract(
+        YIELD_DISTRIBUTOR_ADDRESS,
+        YIELD_DISTRIBUTOR_ABI,
+        signer
+      );
+      
+      const tx = await yieldContract.claimYield(tokenId);
+      toast({
+        title: "Claim Submitted",
+        description: "Waiting for confirmation...",
+        status: "info"
+      });
+      await tx.wait();
       
       toast({
         title: "Yield Claimed Successfully!",
-        description: `You received ${amount} to your wallet.`,
         status: "success",
-        duration: 3000,
       });
+      loadYieldData(); // Refresh
     } catch (error) {
-      toast({ title: "Claim Failed", status: "error" });
-    } finally {
-      setLoading(prev => ({ ...prev, [tokenId]: false }));
+      toast({ title: "Failed to claim yield", description: error.message, status: "error" });
+      console.error(error);
     }
   };
+
+  if (loading) return (
+      <Container maxW="container.xl" py={8} centerContent>
+          <Spinner size="xl" />
+          <Text mt={4}>Loading Yield Data...</Text>
+      </Container>
+  );
 
   return (
     <Container maxW="container.xl" py={8}>
@@ -68,72 +148,61 @@ const YieldDashboard = ({ provider, address }) => {
           <Text color="gray.400">Track and claim earnings from your Real-World Assets.</Text>
         </Box>
 
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
-          <Box p={6} bg="purple.900" borderRadius="lg" border="1px" borderColor="purple.700">
+        <Box p={6} bg="purple.900" borderRadius="lg" border="1px" borderColor="purple.700">
             <Stat>
-              <StatLabel color="purple.200">Total Yield Earned</StatLabel>
-              <StatNumber fontSize="3xl" color="white">$1,247.32</StatNumber>
-              <StatHelpText color="purple.300">Lifetime Earnings</StatHelpText>
+            <StatLabel color="purple.200">Total Claimable Yield</StatLabel>
+            <StatNumber fontSize="3xl" color="white">{totalClaimable} ARIA</StatNumber>
+            <StatHelpText color="purple.300">From {yields.length} RWA NFTs</StatHelpText>
             </Stat>
-          </Box>
-          <Box p={6} bg="blue.900" borderRadius="lg" border="1px" borderColor="blue.700">
-             <Stat>
-              <StatLabel color="blue.200">Claimable Balance</StatLabel>
-              <StatNumber fontSize="3xl" color="white">$182.12</StatNumber>
-              <StatHelpText color="blue.300">Available Now</StatHelpText>
-            </Stat>
-          </Box>
-          <Box p={6} bg="gray.800" borderRadius="lg" border="1px" borderColor="gray.700">
-             <Stat>
-              <StatLabel color="gray.400">Active Assets</StatLabel>
-              <StatNumber fontSize="3xl" color="white">3</StatNumber>
-              <StatHelpText>Generating Yield</StatHelpText>
-            </Stat>
-          </Box>
-        </SimpleGrid>
-
+        </Box>
+        
         <Box bg="gray.800" borderRadius="lg" p={6} overflowX="auto">
-          <Heading size="md" mb={6}>Your Yield Streams</Heading>
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Asset Name</Th>
-                <Th>Token ID</Th>
-                <Th>APY / ROI</Th>
-                <Th>Claimable</Th>
-                <Th>Action</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {MOCK_YIELD_DATA.map((item) => (
-                <Tr key={item.tokenId}>
-                  <Td fontWeight="bold">{item.name}</Td>
-                  <Td>#{item.tokenId}</Td>
-                  <Td>
-                    <Badge colorScheme="green">{item.apy}</Badge>
-                  </Td>
-                  <Td>{item.claimable} {item.asset}</Td>
-                  <Td>
-                    <Button 
-                      size="sm" 
-                      colorScheme="purple" 
-                      onClick={() => handleClaim(item.tokenId, item.claimable + ' ' + item.asset)}
-                      isLoading={loading[item.tokenId]}
-                    >
-                      Claim Rewards
-                    </Button>
-                  </Td>
+            <Heading size="md" mb={6}>Your Yield Streams</Heading>
+            <Table variant="simple">
+                <Thead>
+                <Tr>
+                    <Th>Asset Name</Th>
+                    <Th>Token ID</Th>
+                    <Th>Status</Th>
+                    <Th>Claimable</Th>
+                    <Th>Total Generated</Th>
+                    <Th>Action</Th>
                 </Tr>
-              ))}
-              <Tr>
-                 <Td fontWeight="bold" color="gray.500">Supply Chain Batch #99</Td>
-                 <Td>#8</Td>
-                 <Td><Badge>0%</Badge></Td>
-                 <Td>0.00</Td>
-                 <Td><Button size="sm" isDisabled>No Yield</Button></Td>
-              </Tr>
-            </Tbody>
-          </Table>
+                </Thead>
+                <Tbody>
+                {yields.map((y) => (
+                    <Tr key={y.tokenId}>
+                    <Td fontWeight="bold">{y.name}</Td>
+                    <Td>#{y.tokenId}</Td>
+                    <Td>
+                        <Badge colorScheme={y.active ? 'green' : 'gray'}>
+                        {y.active ? 'Active' : 'Paused'}
+                        </Badge>
+                    </Td>
+                    <Td>{Number(y.claimable).toFixed(4)} ARIA</Td>
+                    <Td>{Number(y.totalYield).toFixed(4)} ARIA</Td>
+                    <Td>
+                        <Button
+                        size="sm"
+                        colorScheme="purple"
+                        onClick={() => handleClaim(y.tokenId)}
+                        isDisabled={parseFloat(y.claimable) <= 0}
+                        >
+                        Claim
+                        </Button>
+                    </Td>
+                    </Tr>
+                ))}
+                
+                {yields.length === 0 && (
+                    <Tr>
+                        <Td colSpan={6} textAlign="center" py={4} color="gray.500">
+                            You don't own any yield-generating RWA NFTs yet.
+                        </Td>
+                    </Tr>
+                )}
+                </Tbody>
+            </Table>
         </Box>
       </VStack>
     </Container>

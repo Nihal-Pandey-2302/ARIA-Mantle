@@ -463,7 +463,7 @@ def get_nft_live_price(token_id):
     }
     """
     try:
-        w3 = Web3(Web3.HTTPProvider(os.getenv("QIE_RPC_URL", "http://127.0.0.1:8545/")))
+        w3 = Web3(Web3.HTTPProvider(os.getenv("MANTLE_RPC_URL", "https://endpoints.omniatech.io/v1/mantle/sepolia/public")))
         marketplace = w3.eth.contract(address=ARIAMARKETPLACE_ADDRESS, abi=ARIAMARKETPLACE_ABI)
 
         try:
