@@ -1,0 +1,10 @@
+# backend/requirements.txt
+flask
+flask-cors
+python-dotenv
+google-generativeai
+requests
+pypdf
+web3>=6.0.0
+gunicorn
+groq>=0.13.0
