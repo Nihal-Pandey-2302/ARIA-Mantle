@@ -5,7 +5,7 @@ import {
   Image, Stack, Divider 
 } from '@chakra-ui/react';
 import { ethers } from 'ethers';
-import { ARIA_MARKETPLACE_ADDRESS, ARIA_MARKETPLACE_ABI } from '../constants';
+import { ARIA_MARKETPLACE_ADDRESS, ARIA_MARKETPLACE_ABI, publicProvider } from '../constants';
 
 export default function GovernancePage({ signer }) {
   const [listings, setListings] = useState([]);
@@ -17,13 +17,16 @@ export default function GovernancePage({ signer }) {
   }, [signer]);
 
   const fetchListings = async () => {
-    if (!signer) return;
+    // Use publicProvider for robust reading
+    const readProvider = signer ? signer.provider : publicProvider;
+    if (!readProvider && !signer) return;
+
     setLoading(true);
     try {
       const marketplace = new ethers.Contract(
         ARIA_MARKETPLACE_ADDRESS,
         ARIA_MARKETPLACE_ABI,
-        signer
+        readProvider
       );
 
       // In a real app, we'd have an event indexer or a 'getAllListings' function.

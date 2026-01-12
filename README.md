@@ -247,6 +247,35 @@ Sellers can list assets in USD, preventing crypto-volatility risk.
 
 ---
 
+---
+
+## 📸 Application Screenshots
+
+### 1. Dashboard & AI Analysis
+
+![Home Page](docs/01-homepage-empty.png)
+_The main dashboard where users verify identity and start the minting flow._
+
+![AI Analysis](docs/04-analysis-complete.png)
+_AI-generated valuation report before minting._
+
+### 2. Marketplace & Listing
+
+![Listing](docs/04b-listing-form.png)
+_Listing verified RWAs with hybrid usage of USD or ARIA pricing._
+
+### 3. Yield Dashboard
+
+![Yield Dashboard](docs/09-yield-page.png)
+_Tracking real-time yield generation from RWA assets._
+
+### 4. Governance
+
+![Governance](docs/10-governance%20page.png)
+_Community governance portal for disputing suspicious assets._
+
+---
+
 ## 📜 Deployed Contracts (Mantle Testnet)
 
 | Contract             | Address                                      |

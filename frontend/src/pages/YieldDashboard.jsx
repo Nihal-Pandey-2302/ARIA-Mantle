@@ -59,39 +59,56 @@ const YieldDashboard = ({ provider, address }) => {
         readProvider
       );
       
-      const balance = await ariaNFTContract.balanceOf(address);
+      // Strategy: Find Transfer events to the user, then verify current ownership
+      // This works around lack of ERC721Enumerable
+      // Optimization: Restrict block range to avoid RPC 503 errors (scanning from 0 is too heavy)
+      const currentBlock = await readProvider.getBlockNumber();
+      const fromBlock = Math.max(0, currentBlock - 50000); // Scan last ~24h (Mantle block time is fast)
+      
+      const filter = ariaNFTContract.filters.Transfer(null, address);
+      const events = await ariaNFTContract.queryFilter(filter, fromBlock);
+      
+      // Get unique token IDs from incoming transfers
+      const uniqueTokenIds = [...new Set(events.map(e => e.args[2].toString()))];
+      
       const yieldData = [];
       let total = 0n; // Use BigInt for calculation
       
-      // Iterate through user's NFTs
-      for (let i = 0; i < Number(balance); i++) {
-        const tokenId = await ariaNFTContract.tokenOfOwnerByIndex(address, i);
-        const pending = await yieldContract.pendingYield(tokenId, address);
-        const stats = await yieldContract.getYieldStats(tokenId);
-        
-        // Get NFT metadata
-        const tokenURI = await ariaNFTContract.tokenURI(tokenId);
-        let metadata = { name: `SWA #${tokenId}` };
+      for (const tokenId of uniqueTokenIds) {
+        // Double check ownership (user might have sold it)
         try {
-            // Check if it's an IPFS hash or full URL
-            const url = tokenURI.startsWith('ipfs://') 
-                ? `https://ipfs.io/ipfs/${tokenURI.replace('ipfs://', '')}` 
-                : tokenURI;
-            metadata = await fetch(url).then(r => r.json());
-        } catch (e) {
-            console.warn("Failed to fetch metadata", e);
+            const currentOwner = await ariaNFTContract.ownerOf(tokenId);
+            if (currentOwner.toLowerCase() !== address.toLowerCase()) continue;
+
+            const pending = await yieldContract.pendingYield(tokenId, address);
+            const stats = await yieldContract.getYieldStats(tokenId);
+            
+            // Get NFT metadata
+            const tokenURI = await ariaNFTContract.tokenURI(tokenId);
+            let metadata = { name: `SWA #${tokenId}` };
+            try {
+                // Check if it's an IPFS hash or full URL
+                const url = tokenURI.startsWith('ipfs://') 
+                    ? `https://ipfs.io/ipfs/${tokenURI.replace('ipfs://', '')}` 
+                    : tokenURI;
+                metadata = await fetch(url).then(r => r.json());
+            } catch (e) {
+                console.warn("Failed to fetch metadata", e);
+            }
+            
+            yieldData.push({
+              tokenId: tokenId.toString(),
+              name: metadata.name || `Asset #${tokenId.toString()}`,
+              claimable: ethers.formatEther(pending),
+              totalYield: ethers.formatEther(stats[0]), // stats.totalYield
+              yieldRate: stats[2].toString(), // stats.yieldRate
+              active: stats[3] // stats.active
+            });
+            
+            total += BigInt(pending);
+        } catch (err) {
+            console.warn(`Error checking token ${tokenId}`, err);
         }
-        
-        yieldData.push({
-          tokenId: tokenId.toString(),
-          name: metadata.name || `Asset #${tokenId.toString()}`,
-          claimable: ethers.formatEther(pending),
-          totalYield: ethers.formatEther(stats[0]), // stats.totalYield
-          yieldRate: stats[2].toString(), // stats.yieldRate
-          active: stats[3] // stats.active
-        });
-        
-        total += BigInt(pending);
       }
       
       setYields(yieldData);
