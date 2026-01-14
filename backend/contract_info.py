@@ -16,6 +16,7 @@ ORACLE_ADDRESS = "0x85B5F81f2581Ae8BbC1353F55456EF00aD67993B"
 
 # --- DYNAMIC ABI LOADING ---
 
+def load_abi(contract_filename: str) -> list:
     try:
         # Load locally for Render deployment support
         artifact_path = os.path.join(
