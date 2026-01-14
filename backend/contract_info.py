@@ -16,20 +16,12 @@ ORACLE_ADDRESS = "0x85B5F81f2581Ae8BbC1353F55456EF00aD67993B"
 
 # --- DYNAMIC ABI LOADING ---
 
-def load_abi(contract_filename: str) -> list:
-    """
-    Loads a contract's ABI from its Hardhat artifact file.
-    Assumes this script is in 'backend/' and artifacts are in '../contracts-hardhat/artifacts/'.
-    """
     try:
-        # Construct the relative path to the artifact file
+        # Load locally for Render deployment support
         artifact_path = os.path.join(
             os.path.dirname(__file__),
-            '..',
-            'contracts',
-            'artifacts',
-            'contracts',
-            contract_filename
+            'abis',
+            contract_filename.split('/')[-1] # Take only the filename, ignore previous folder structure if passed
         )
 
         with open(artifact_path, 'r') as f:

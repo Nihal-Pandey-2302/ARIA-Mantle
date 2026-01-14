@@ -3,7 +3,9 @@
 ## Mantle Global Hackathon 2025 🏆
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Built%20on-Mantle-000000?style=for-the-badge" alt="Mantle">
+  <a href="https://aria-mantle.vercel.app/">
+    <img src="https://img.shields.io/badge/Built%20on-Mantle-000000?style=for-the-badge" alt="Mantle">
+  </a>
   <img src="https://img.shields.io/badge/AI-Groq%20Llama%203.3-orange?style=for-the-badge" alt="Groq AI">
   <img src="https://img.shields.io/badge/Track-RWA%20%2F%20RealFi-blueviolet?style=for-the-badge" alt="RWA Track">
   <br/>
