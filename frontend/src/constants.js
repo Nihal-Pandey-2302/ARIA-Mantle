@@ -1,4 +1,3 @@
-import FractionalArtifact from '../../contracts/artifacts/contracts/FractionalNFT.sol/FractionalNFT.json';
 // src/constants.js
 import { ethers } from 'ethers';
 
@@ -23,18 +22,14 @@ export const ARIA_MARKETPLACE_ADDRESS = MARKETPLACE_ADDRESS; // Alias for consis
 
 export const FRACTIONAL_NFT_ADDRESS = "0x3e2B64f8d927447C370CD6a84FAdf92f6B95C806";
 export const YIELD_DISTRIBUTOR_ADDRESS = "0x047100C5357497bFC8Ecc6846E65BC7bDb4d35f9";
-export const ORACLE_ADDRESS = "0x85B5F81f2581Ae8BbC1353F55456EF00aD67993B";;
+export const ORACLE_ADDRESS = "0x85B5F81f2581Ae8BbC1353F55456EF00aD67993B";
 
-// --- Contract ABIs (imported from artifacts) ---
-import NftArtifact from '../../contracts/artifacts/contracts/AriaNFT.sol/AriaNFT.json';
-import TokenArtifact from '../../contracts/artifacts/contracts/AriaToken.sol/AriaToken.json';
-import MarketplaceArtifact from '../../contracts/artifacts/contracts/AriaMarketplace.sol/AriaMarketplace.json';
-import YieldDistributorArtifact from '../../contracts/artifacts/contracts/YieldDistributor.sol/YieldDistributor.json';
-
-// Note: FractionalArtifact import is at the top of file, we'll use it here
-// If it was removed, we'd need to re-add it. But since we are replacing lines 28-67, 
-// we should make sure we have access to it.
-// The previous view showed import FractionalArtifact at line 1.
+// --- Contract ABIs (imported from local abis folder for Vercel support) ---
+import NftArtifact from './abis/AriaNFT.json';
+import TokenArtifact from './abis/AriaToken.json';
+import MarketplaceArtifact from './abis/AriaMarketplace.json';
+import YieldDistributorArtifact from './abis/YieldDistributor.json';
+import FractionalArtifact from './abis/FractionalNFT.json';
 
 export const ARIA_NFT_ABI = NftArtifact.abi;
 export const ARIA_TOKEN_ABI = TokenArtifact.abi;
