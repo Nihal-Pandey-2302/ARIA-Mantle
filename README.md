@@ -12,6 +12,9 @@
   <a href="https://www.youtube.com/watch?v=DoiVuKCWqmI">
     <img src="https://img.shields.io/badge/Watch_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch Demo">
   </a>
+  <a href="https://aria-mantle.vercel.app/">
+    <img src="https://img.shields.io/badge/Live_Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo">
+  </a>
 </p>
 
 **The world's first AI-powered multi-document RWA verification platform**  
