@@ -6,6 +6,10 @@
   <img src="https://img.shields.io/badge/Built%20on-Mantle-000000?style=for-the-badge" alt="Mantle">
   <img src="https://img.shields.io/badge/AI-Groq%20Llama%203.3-orange?style=for-the-badge" alt="Groq AI">
   <img src="https://img.shields.io/badge/Track-RWA%20%2F%20RealFi-blueviolet?style=for-the-badge" alt="RWA Track">
+  <br/>
+  <a href="https://www.youtube.com/watch?v=DoiVuKCWqmI">
+    <img src="https://img.shields.io/badge/Watch_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch Demo">
+  </a>
 </p>
 
 **The world's first AI-powered multi-document RWA verification platform**  
